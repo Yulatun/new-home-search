@@ -83,6 +83,6 @@ alter publication supabase_realtime add table public.apartments, public.ratings;
 
 -- Who may sign in: REPLACE these two rows (lowercase emails) ----------------
 insert into public.members (email, name) values
-  ('julialimbekov.@gmail.com', 'Yuliya'),
+  ('julialimbekov@gmail.com', 'Yuliya'),
   ('lugovsky.v@gmail.com', 'Vlad')
 on conflict (email) do update set name = excluded.name;

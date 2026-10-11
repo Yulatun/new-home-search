@@ -1,0 +1,736 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Apartment Shortlist</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one comparison sheet. Criteria run down a sticky left column, each apartment is a column; the sheet scrolls sideways inside its own frame. */
+:root{
+  --bg:#eef2f6; --surface:#ffffff; --band:#e4eaf2; --ink:#14233b; --muted:#5b6b82; --line:#d3dbe6;
+  --accent:#1f5fd6; --accent-soft:#e1ebfc; --on-accent:#ffffff; --good:#0f7a52; --danger:#b3261e;
+  --display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0f1622; --surface:#172132; --band:#1f2b40; --ink:#e6ecf5; --muted:#93a1b8; --line:#2a3649;
+  --accent:#7aa7ff; --accent-soft:#1d2c4a; --on-accent:#0f1622; --good:#5fd0a0; --danger:#ff8a80; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0f1622; --surface:#172132; --band:#1f2b40; --ink:#e6ecf5; --muted:#93a1b8; --line:#2a3649;
+  --accent:#7aa7ff; --accent-soft:#1d2c4a; --on-accent:#0f1622; --good:#5fd0a0; --danger:#ff8a80; color-scheme:dark }
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;padding-block:28px 48px;padding-inline:16px}
+.wrap{max-width:1280px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+header{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:flex-end;justify-content:space-between}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(28px,5vw,40px);line-height:1.05;margin:0;letter-spacing:-.02em;text-wrap:balance}
+.lede{margin:6px 0 0;color:var(--muted);max-width:60ch}
+.tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+label.sort{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:13px}
+select,input,textarea{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 9px;min-width:0}
+button{font:inherit;cursor:pointer;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:7px 12px}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
+button.quiet{padding:3px 9px;font-size:13px;color:var(--muted)}
+button.quiet.warn{color:var(--danger);border-color:var(--danger)}
+.acct{font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line)}
+.tabs button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:8px 14px;font-family:var(--display);font-weight:700;font-size:16px;color:var(--muted);margin-bottom:-1px}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tabs .count{font-family:var(--body);font-weight:500;font-size:13px;color:var(--muted)}
+.folded{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px;color:var(--muted)}
+.folded button{font-size:13px;padding:4px 10px;border-radius:999px;border-style:dashed}
+button.danger{color:var(--danger);border-color:var(--danger)}
+:is(button,select,input,a):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#status{font-size:13px;color:var(--muted);min-height:1.4em}
+#status.err{color:var(--danger)}
+
+.sheet{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+table{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:9px 14px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+tbody th,thead th:first-child{position:sticky;left:0;background:var(--surface);z-index:1;width:150px;min-width:150px;max-width:150px;font-weight:500;color:var(--muted);font-size:13px;border-right:1px solid var(--line)}
+td,thead th.apt{min-width:200px;max-width:260px;overflow-wrap:anywhere}
+thead th{border-bottom:2px solid var(--ink);vertical-align:bottom}
+thead th.apt .name{font-family:var(--display);font-weight:700;font-size:18px;line-height:1.15;color:var(--ink)}
+thead th.apt .acts{display:flex;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap}
+a{color:var(--accent);font-weight:500}
+tr.group th{position:sticky;left:0;background:var(--band);color:var(--ink);font-family:var(--display);font-weight:700;font-size:12px;letter-spacing:.09em;text-transform:uppercase;max-width:none;width:auto;border-right:0;padding-block:6px}
+tr.group .more{border:0;background:none;padding:0;font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit;cursor:pointer}
+tr.group td{background:var(--band);padding:0}
+td.best{color:var(--good);font-weight:600}
+td.best::after{content:" · best";font-weight:500;font-size:12px}
+.none{color:var(--muted)}
+.dirs{display:flex;gap:8px;align-items:center}
+.dirs svg{flex:none}
+.dot{fill:var(--line)} .dot.on{fill:var(--accent)} .ring{fill:none;stroke:var(--line)} .ntick{fill:var(--muted);font:600 7px var(--body)}
+.rate{display:flex;flex-direction:column;gap:6px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;width:max-content}
+.seg button{border:0;border-radius:0;padding:4px 10px;border-right:1px solid var(--line);background:var(--surface)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);font-weight:600}
+.who{font-size:13px;color:var(--muted)} .who b{color:var(--ink);font-weight:600}
+.score{font-family:var(--display);font-weight:700;font-size:20px}
+.score small{font-family:var(--body);font-weight:400;font-size:12px;color:var(--muted)}
+
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:32px 20px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.empty h2{font-family:var(--display);font-size:22px;margin:0}
+.empty p{margin:0;color:var(--muted);max-width:60ch}
+
+dialog{border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);padding:0;width:min(720px,calc(100vw - 24px));max-height:calc(100vh - 24px)}
+dialog::backdrop{background:rgba(10,16,28,.55)}
+form{display:flex;flex-direction:column;gap:16px;padding:20px}
+form h2{font-family:var(--display);font-size:22px;margin:0}
+fieldset{border:0;border-top:1px solid var(--line);padding:12px 0 0;margin:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+legend{font-family:var(--display);font-weight:700;font-size:12px;letter-spacing:.09em;text-transform:uppercase;padding:0 8px 0 0}
+.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);min-width:0}
+.f.wide{grid-column:1/-1}
+.f input,.f select{width:100%}
+.checks{display:flex;flex-wrap:wrap;gap:4px 10px;color:var(--ink)}
+.checks label{display:flex;gap:4px;align-items:center}
+.checks input{width:auto}
+.pick{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-variant-numeric:tabular-nums}
+.pick input{margin-top:4px}
+.bar{display:flex;gap:10px;justify-content:space-between;flex-wrap:wrap;position:sticky;bottom:0;background:var(--surface);padding-top:12px;border-top:1px solid var(--line)}
+.bar div{display:flex;gap:10px}
+@media (max-width:560px){ tbody th,thead th:first-child{width:112px;min-width:112px;max-width:112px;padding-inline:10px} td,thead th.apt{min-width:176px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Apartment Shortlist</h1>
+      <p class="lede">Every apartment we are considering, side by side. Each of us rates layout, location, vibe and quietness on our own; the other's score appears once you have given yours.</p>
+    </div>
+    <div class="tools">
+      <label class="sort" for="sort">Order by
+        <select id="sort">
+          <option value="added">Date added</option>
+          <option value="price">Total price</option>
+          <option value="ppm">Price per m²</option>
+          <option value="score">Our rating</option>
+        </select>
+      </label>
+      <button id="webBtn" type="button" hidden>Import from web page</button>
+      <button id="pdfBtn" type="button" hidden>Import from PDF</button>
+      <input id="pdfFile" type="file" accept="application/pdf,.pdf" hidden>
+      <button class="primary" id="add" type="button" hidden>Add apartment</button>
+      <span class="acct" id="acct" hidden><span id="whoami"></span> <button type="button" class="quiet" id="signout">Sign out</button></span>
+    </div>
+  </header>
+  <div class="tabs" role="tablist" aria-label="Visit status">
+    <button type="button" role="tab" id="tab_planned" aria-selected="true">Planning to visit <span class="count" id="n_planned"></span></button>
+    <button type="button" role="tab" id="tab_visited" aria-selected="false">Visited <span class="count" id="n_visited"></span></button>
+  </div>
+  <div id="status" role="status"></div>
+  <form class="empty" id="signin" hidden novalidate>
+    <h2>Sign in</h2>
+    <p>Enter your email and we will send you a sign-in link. Only the two of us are on the list.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;width:100%;max-width:440px">
+      <input id="signinEmail" type="email" autocomplete="email" placeholder="you@example.com" style="flex:1 1 220px" required>
+      <button class="primary" type="submit" id="signinBtn">Send sign-in link</button>
+    </div>
+    <p id="signinMsg" role="status"></p>
+  </form>
+  <div class="empty" id="empty">
+    <h2 id="emptyTitle">Loading apartments…</h2>
+    <p id="emptyText">The comparison sheet appears here once the saved apartments load.</p>
+  </div>
+  <div class="folded" id="folded" hidden></div>
+  <div class="sheet" id="sheet" hidden><table id="table"></table></div>
+</div>
+
+<dialog id="dlg">
+  <form id="form" novalidate>
+    <h2 id="formTitle">Add apartment</h2>
+    <p id="formNote" hidden style="margin:0;padding:8px 12px;border-radius:6px;background:var(--accent-soft)"></p>
+    <div id="fields" style="display:flex;flex-direction:column;gap:16px"></div>
+    <div class="bar">
+      <button type="button" class="danger" id="del" hidden>Delete</button>
+      <div style="margin-left:auto"><button type="button" id="cancel">Cancel</button><button class="primary" type="submit">Save</button></div>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="web">
+  <form id="webForm" novalidate>
+    <h2>Import from a web page</h2>
+    <p style="margin:0;color:var(--muted)">This page cannot open other websites by itself. Open the offer in a browser tab, select everything (Ctrl+A or ⌘A), copy, and paste it below. The text is read here in your browser and is not stored.</p>
+    <label class="f" for="webUrl">Link to the offer<input id="webUrl" type="url" placeholder="https://" inputmode="url"></label>
+    <label class="f" for="webText">Pasted page text<textarea id="webText" rows="8" style="width:100%;resize:vertical"></textarea></label>
+    <p id="webErr" role="alert" hidden style="margin:0;color:var(--danger)"></p>
+    <div class="bar"><div style="margin-left:auto"><button type="button" id="webCancel">Cancel</button><button class="primary" type="submit">Read details</button></div></div>
+  </form>
+</dialog>
+<dialog id="pick">
+  <form id="pickForm" novalidate>
+    <h2 id="pickTitle">Apartments found</h2>
+    <p style="margin:0;color:var(--muted)">Tick the ones to add. Each becomes a column you can edit and rate afterwards. Values come from pattern matching, so check them against the offer.</p>
+    <div id="pickList" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div class="bar"><div style="margin-left:auto"><button type="button" id="pickCancel">Cancel</button><button class="primary" type="submit">Add selected</button></div></div>
+  </form>
+</dialog>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+<script>
+const DIRS = ["N","NE","E","SE","S","SW","W","NW"];
+const YN = ["Yes","No"];
+const GROUPS = [
+  {name:"Basics", fields:[
+    {k:"state", more:true, l:"New or ready", t:"select", o:["New build","Ready to live in"]},
+    {k:"finish", more:true, l:"Finish level", t:"select", o:["No finish","Partial finish","Full finish"]},
+    {k:"handover", l:"Handover date", t:"month"},
+    {k:"rooms", l:"Rooms", t:"num"},
+    {k:"bathrooms", l:"Bathrooms", t:"num"},
+    {k:"area", l:"Total area", t:"num", u:" m²", best:"high"},
+    {k:"floor", more:true, l:"Floor", t:"num", show:a => a.floor==null ? null : a.floor + (a.floorsTotal!=null ? " of " + a.floorsTotal : "")},
+    {k:"floorsTotal", l:"Floors in building", t:"num", formOnly:true},
+  ]},
+  {name:"Price", fields:[
+    {k:"price", l:"Total price", t:"num", pre:"€", best:"low"},
+    {k:"ppm", l:"Price per m²", calc:a => a.price>0 && a.area>0 ? Math.round(a.price/a.area) : null, pre:"€", best:"low"},
+    {k:"utilities", l:"Monthly utilities", t:"num", pre:"€", best:"low"},
+  ]},
+  {name:"Light", fields:[
+    {k:"windows", l:"Windows face", t:"dirs"},
+  ]},
+  {name:"Location", fields:[
+    {k:"zone", l:"City or around", t:"select", o:["In the city","Around the city"]},
+    {k:"district", more:true, l:"District / address", t:"text"},
+    {k:"commute", more:true, l:"Commute to work", t:"num", u:" min", best:"low"},
+    {k:"school", more:true, l:"School / kindergarten", t:"num", u:" min", best:"low"},
+    {k:"shops", l:"Grocery shop", t:"num", u:" min", best:"low"},
+    {k:"transit", l:"Public transport stop", t:"num", u:" min", best:"low"},
+  ]},
+  {name:"Building", fields:[
+    {k:"year", l:"Year built", t:"num", plain:true},
+    {k:"energy", l:"Energy class", t:"select", o:["A++","A+","A","B","C","D or lower"]},
+    {k:"heating", l:"Heating", t:"select", o:["Central (district)","Gas","Heat pump","Electric","Other"]},
+    {k:"ceiling", more:true, l:"Ceiling height", t:"num", u:" m", best:"high", step:"0.01"},
+  ]},
+  {name:"Comfort", fields:[
+    {k:"parking", l:"Parking", t:"select", o:["None","Street","Yard space","Underground"]},
+    {k:"storage", l:"Storage room", t:"select", o:YN},
+  ]},
+];
+const RATED = [{k:"layout", l:"Room layout"}, {k:"location", l:"Location"}, {k:"vibe", l:"Vibe"}, {k:"noise", l:"Quietness (5 = very quiet)"}];
+const FIELDS = GROUPS.flatMap(g => g.fields).filter(f => f.t);
+
+const $ = id => document.getElementById(id);
+function h(tag, props, ...kids){
+  const e = document.createElement(tag);
+  for (const k in (props||{})) { if (k==="class") e.className = props[k]; else if (k.startsWith("on")) e.addEventListener(k.slice(2), props[k]); else if (props[k]!=null) e.setAttribute(k, props[k]); }
+  for (const c of kids.flat()) if (c!=null) e.append(c);
+  return e;
+}
+function say(msg, err){ $("status").textContent = msg||""; $("status").className = err ? "err" : ""; }
+const num = n => Number(n).toLocaleString("en-US", {maximumFractionDigits:2});
+
+let db=null, col=null, canWrite=true, busy=false, sb=null, me="", members=[];
+const CFG = window.SHORTLIST_CONFIG || {};
+let apts=[], names={}, editing=null, queue=Promise.resolve();
+let sortBy="added", showMore=false, tab="planned", loaded=false;
+try { tab = localStorage.getItem("tab")==="visited" ? "visited" : "planned"; } catch(e){}
+try { showMore = localStorage.getItem("more")==="1"; } catch(e){}
+try { sortBy = localStorage.getItem("sort") || "added"; } catch(e){}
+$("sort").value = sortBy;
+
+// ---------- ratings ----------
+function avg(a, crit){
+  const v = Object.values(a.ratings||{}).map(r => r && r[crit]).filter(x => typeof x==="number");
+  return v.length ? v.reduce((s,x)=>s+x,0)/v.length : null;
+}
+// No peeking: someone else's score on a criterion shows only after you have given your own.
+const myScore = (a, crit) => { const r = a.ratings && a.ratings[myKey()]; return r && typeof r[crit]==="number" ? r[crit] : null; };
+// The database only returns your partner's score once you have rated that criterion; others_rated() says whether they have.
+const othersRated = (a, crit) => !!(a._others && a._others.has(crit));
+const partnerName = () => (members.find(m => m.email !== me) || {}).name || "Your partner";
+const revealed = (a, crit) => !canWrite || myScore(a, crit)!=null || !othersRated(a, crit);
+const allRevealed = a => RATED.every(r => revealed(a, r.k));
+function overall(a){
+  const v = RATED.map(r => avg(a, r.k)).filter(x => x!=null);
+  return v.length ? v.reduce((s,x)=>s+x,0)/v.length : null;
+}
+const myKey = () => me;
+function rate(a, crit, n){
+  const cur = a.ratings && a.ratings[myKey()] && a.ratings[myKey()][crit];
+  const val = cur===n ? null : n;
+  write(() => col.doc(a.id).update({ratings:{[myKey()]:{[crit]:val}}}));
+}
+function write(fn){
+  queue = queue.then(fn).then(() => say("Saved"), e => {
+    console.error(e);
+    say("Could not save" + (e && e.message ? ": " + e.message : ". Check your connection and try again."), true);
+  });
+  return queue;
+}
+
+// ---------- table ----------
+function compass(dirs){
+  const svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
+  svg.setAttribute("viewBox","0 0 36 36"); svg.setAttribute("width","36"); svg.setAttribute("height","36"); svg.setAttribute("aria-hidden","true");
+  let s = '<circle class="ring" cx="18" cy="19" r="9"/><text class="ntick" x="18" y="6" text-anchor="middle">N</text>';
+  DIRS.forEach((d,i) => { const a = i*Math.PI/4; s += `<circle class="dot${dirs.includes(d)?" on":""}" cx="${(18+12*Math.sin(a)).toFixed(1)}" cy="${(19-12*Math.cos(a)).toFixed(1)}" r="${dirs.includes(d)?3.2:1.8}"/>`; });
+  svg.innerHTML = s;
+  return svg;
+}
+function value(f, a){
+  if (f.calc) return f.calc(a);
+  const v = a[f.k];
+  return (v===undefined || v==="" || (Array.isArray(v) && !v.length)) ? null : v;
+}
+function cell(f, a, best){
+  const v = value(f, a);
+  if (v==null) return h("td", {class:"none"}, "–");
+  if (f.t==="dirs") return h("td", null, h("div", {class:"dirs"}, compass(v), v.join(", ")));
+  let text;
+  if (f.show) text = f.show(a);
+  else if (f.t==="month") { const d = new Date(v+"-01T00:00:00"); text = isNaN(d) ? v : d.toLocaleDateString("en-GB",{month:"short",year:"numeric"}); }
+  else if (typeof v==="number") text = (f.pre||"") + (f.plain ? v : num(v)) + (f.u||"");
+  else text = String(v);
+  return h("td", {class: best!=null && v===best ? "best" : null}, text);
+}
+function bestOf(f, list){
+  if (!f.best) return null;
+  const v = list.map(a => value(f,a)).filter(x => typeof x==="number");
+  if (v.length<2) return null;
+  const b = f.best==="low" ? Math.min(...v) : Math.max(...v);
+  return v.every(x => x===b) ? null : b;
+}
+function rateCell(a, crit){
+  const box = h("div", {class:"rate"});
+  const mine = a.ratings && a.ratings[myKey()] && a.ratings[myKey()][crit];
+  if (canWrite) {
+    box.append(h("div", {class:"seg", role:"group", "aria-label":"Your rating, 1 to 5"},
+      [1,2,3,4,5].map(n => h("button", {type:"button", "aria-pressed": String(mine===n), onclick:() => rate(a, crit, n)}, String(n)))));
+  }
+  if (!revealed(a, crit)) {
+    box.append(h("div", {class:"who"}, partnerName() + " has rated. Give your score to see theirs."));
+    return h("td", null, box);
+  }
+  for (const [k, r] of Object.entries(a.ratings||{})) {
+    if (!r || typeof r[crit]!=="number") continue;
+    const who = k===myKey() ? "You" : (names[k] || "Partner");
+    box.append(h("div", {class:"who"}, who + ": ", h("b", null, String(r[crit]))));
+  }
+  const m = avg(a, crit);
+  if (m==null && !canWrite) box.append(h("span", {class:"none"}, "Not rated"));
+  if (m!=null) box.append(h("div", {class:"who"}, "Average ", h("b", null, m.toFixed(1))));
+  return h("td", null, box);
+}
+function sorted(){
+  const list = [...apts];
+  const key = {added:a => a.createdAt||0, price:a => a.price ?? Infinity, ppm:a => (a.price>0&&a.area>0) ? a.price/a.area : Infinity, score:a => -((allRevealed(a) ? overall(a) : null) ?? -1)}[sortBy];
+  return list.sort((x,y) => key(x)-key(y));
+}
+function render(){
+  $("add").hidden = !(db && canWrite);
+  $("pdfBtn").hidden = !(db && canWrite && window.pdfjsLib);
+  $("webBtn").hidden = !(db && canWrite);
+  for (const k of ["planned","visited"]) { $("tab_"+k).setAttribute("aria-selected", String(tab===k)); $("n_"+k).textContent = "(" + apts.filter(a => !!a.visited === (k==="visited")).length + ")"; }
+  const all = sorted().filter(a => !!a.visited === (tab==="visited")), list = all.filter(a => !a.collapsed), folded = all.filter(a => a.collapsed);
+  $("folded").hidden = !folded.length;
+  $("folded").replaceChildren(folded.length ? "Collapsed:" : "", ...folded.map(a =>
+    h("button", {type:"button", title:"Show this apartment in the table again", disabled: canWrite ? null : "", onclick:() => write(() => col.doc(a.id).update({collapsed:false}))}, "▸ " + (a.title || "Untitled apartment"))));
+  $("sheet").hidden = !list.length; $("empty").hidden = !!all.length;
+  if (loaded && !all.length && apts.length) {
+    $("emptyTitle").textContent = tab==="visited" ? "No visited apartments yet" : "Nothing planned right now";
+    $("emptyText").textContent = tab==="visited" ? "After a viewing, press “Mark visited” on the apartment in the Planning to visit tab and it moves here." : "Apartments you add while this tab is open land here. Visited ones are in the Visited tab.";
+  } else if (loaded && !apts.length) {
+    $("emptyTitle").textContent = "No apartments yet";
+    $("emptyText").textContent = canWrite ? "Press “Add apartment” and paste the link to an offer, or use the import buttons to fill one in from a realtor's PDF or a copied web page. Each apartment becomes a column, so you can compare price per m², window directions, location and your ratings side by side." : "Nothing has been added yet. You have view-only access to this sheet.";
+  }
+  if (!list.length) return;
+  const t = $("table"); t.replaceChildren();
+  const cols = list.length + 1;
+  t.append(h("thead", null, h("tr", null, h("th", {scope:"col"}, "Criteria"),
+    list.map(a => h("th", {class:"apt", scope:"col"},
+      h("div", {class:"name"}, a.title || "Untitled apartment"),
+      h("div", {class:"acts"},
+        /^https?:\/\//i.test(a.url||"") ? h("a", {href:a.url, target:"_blank", rel:"noopener noreferrer"}, "Open listing ↗") : h("span", {class:"none"}, "No link"),
+        canWrite ? h("button", {type:"button", class:"quiet", onclick:() => openForm(a)}, "Edit") : null,
+        canWrite ? h("button", {type:"button", class:"quiet", onclick:() => write(() => col.doc(a.id).update({visited: !a.visited}))}, a.visited ? "Move to planned" : "Mark visited") : null,
+        canWrite ? h("button", {type:"button", class:"quiet", title:"Hide from the table without deleting", onclick:() => write(() => col.doc(a.id).update({collapsed:true}))}, "Collapse") : null,
+        canWrite ? h("button", {type:"button", class:"quiet", onclick:e => {
+          const b = e.currentTarget;
+          if (!b.classList.contains("warn")) { b.classList.add("warn"); b.textContent = "Confirm delete"; setTimeout(() => { b.classList.remove("warn"); b.textContent = "Delete"; }, 4000); return; }
+          write(() => col.doc(a.id).delete());
+        }}, "Delete") : null))))));
+  const body = h("tbody");
+  const group = name => body.append(h("tr", {class:"group"}, h("th", {scope:"colgroup"}, name), h("td", {colspan:String(cols-1)})));
+  group("Our ratings");
+  body.append(h("tr", null, h("th", {scope:"row"}, "Overall score"), list.map(a => { const o = overall(a); return h("td", null, !allRevealed(a) ? h("span", {class:"none"}, "Hidden until you rate everything") : o==null ? h("span", {class:"none"}, "Not rated") : h("span", {class:"score"}, o.toFixed(1), h("small", null, " / 5"))); })));
+  for (const r of RATED) body.append(h("tr", null, h("th", {scope:"row"}, r.l), list.map(a => rateCell(a, r.k))));
+  const row = f => { const b = bestOf(f, list); body.append(h("tr", null, h("th", {scope:"row"}, f.l), list.map(a => cell(f, a, b)))); };
+  for (const g of GROUPS) {
+    const shown = g.fields.filter(f => !f.formOnly && !f.more);
+    if (!shown.length) continue;
+    group(g.name);
+    shown.forEach(row);
+  }
+  const extra = GROUPS.flatMap(g => g.fields).filter(f => f.more);
+  body.append(h("tr", {class:"group"}, h("th", {scope:"colgroup"},
+    h("button", {type:"button", class:"more", "aria-expanded":String(showMore), onclick:() => { showMore = !showMore; try { localStorage.setItem("more", showMore ? "1" : "0"); } catch(e){} render(); }},
+      (showMore ? "▾ " : "▸ ") + "More details (" + extra.length + ")")), h("td", {colspan:String(cols-1)})));
+  if (showMore) extra.forEach(row);
+  t.append(body);
+  resolveNames();
+}
+function resolveNames(){}
+
+// ---------- form ----------
+function buildForm(){
+  const box = $("fields");
+  box.append(h("fieldset", null, h("legend", null, "Listing"),
+    h("label", {class:"f wide", for:"f_title"}, "Name (how you two will call it)", h("input", {id:"f_title", type:"text", maxlength:"80", required:""})),
+    h("label", {class:"f wide", for:"f_url"}, "Link to the offer", h("input", {id:"f_url", type:"url", placeholder:"https://", inputmode:"url"}))));
+  for (const g of GROUPS) {
+    const fs = h("fieldset", null, h("legend", null, g.name));
+    for (const f of g.fields) {
+      if (!f.t) continue;
+      const id = "f_" + f.k;
+      const unit = (f.pre ? " (" + f.pre + ")" : "") + (f.u ? " (" + f.u.trim() + ")" : "");
+      if (f.t==="dirs") fs.append(h("div", {class:"f wide"}, f.l, h("div", {class:"checks", id}, DIRS.map(d => h("label", null, h("input", {type:"checkbox", id:id+"_"+d, value:d}), d)))));
+      else if (f.t==="select") fs.append(h("label", {class:"f", for:id}, f.l, h("select", {id}, h("option", {value:""}, "Not set"), f.o.map(o => h("option", {value:o}, o)))));
+      else fs.append(h("label", {class:"f"+(f.t==="text"?" wide":""), for:id}, f.l + unit, h("input", {id, type:f.t==="num"?"number":f.t, step:f.step||"any", inputmode:f.t==="num"?"decimal":null})));
+    }
+    box.append(fs);
+  }
+}
+function openForm(a, draft, found){
+  editing = a || null;
+  $("formTitle").textContent = a ? "Edit apartment" : "Add apartment";
+  $("formNote").hidden = !draft;
+  if (draft) { $("formNote").textContent = "Found " + found + " of " + FIELDS.length + " fields by pattern matching. Check each value against the offer, fill in the rest, then press Save."; a = draft; }
+  $("del").hidden = !editing; $("del").textContent = "Delete";
+  $("f_title").value = a ? (a.title||"") : ""; $("f_url").value = a ? (a.url||"") : "";
+  for (const f of FIELDS) {
+    const v = a ? a[f.k] : null;
+    if (f.t==="dirs") DIRS.forEach(d => { $("f_"+f.k+"_"+d).checked = Array.isArray(v) && v.includes(d); });
+    else $("f_"+f.k).value = v==null ? (!a && f.k==="rooms" ? "3" : "") : v;
+  }
+  if (draft) a = null;
+  $("dlg").showModal();
+}
+$("form").addEventListener("submit", e => {
+  e.preventDefault();
+  const title = $("f_title").value.trim();
+  if (!title) { $("f_title").focus(); return; }
+  const data = {title, url:$("f_url").value.trim()};
+  for (const f of FIELDS) {
+    if (f.t==="dirs") data[f.k] = DIRS.filter(d => $("f_"+f.k+"_"+d).checked);
+    else { const raw = $("f_"+f.k).value.trim(); data[f.k] = raw==="" ? null : (f.t==="num" ? (isFinite(+raw) ? +raw : null) : raw); }
+  }
+  const target = editing;
+  $("dlg").close();
+  write(() => target ? col.doc(target.id).update(data) : col.add({...data, ratings:{}, visited: tab==="visited", createdAt:Date.now()}));
+});
+$("cancel").addEventListener("click", () => $("dlg").close());
+$("del").addEventListener("click", () => {
+  if ($("del").textContent==="Delete") { $("del").textContent = "Confirm delete"; return; }
+  const target = editing; $("dlg").close();
+  write(() => col.doc(target.id).delete());
+});
+for (const k of ["planned","visited"]) $("tab_"+k).addEventListener("click", () => { tab = k; try { localStorage.setItem("tab", k); } catch(e){} render(); });
+$("add").addEventListener("click", () => openForm(null));
+$("sort").addEventListener("change", e => { sortBy = e.target.value; try { localStorage.setItem("sort", sortBy); } catch(err){} render(); });
+
+// ---------- PDF import ----------
+async function readPdf(file){
+  const pdf = await pdfjsLib.getDocument({data: await file.arrayBuffer()}).promise;
+  const out = [];
+  for (let i=1; i<=Math.min(pdf.numPages, 30); i++) {
+    const tc = await (await pdf.getPage(i)).getTextContent();
+    const rows = [];
+    for (const it of tc.items) {
+      if (!it.str.trim()) continue;
+      const x = it.transform[4], y = it.transform[5];
+      let row = rows.find(r => Math.abs(r.y - y) < 4);
+      if (!row) rows.push(row = {y, cells: []});
+      row.cells.push({x, s: it.str});
+    }
+    rows.sort((p, q) => q.y - p.y);
+    for (const r of rows) out.push(r.cells.sort((p, q) => p.x - q.x).map(c => c.s.trim()).join(" ").replace(/\s+/g, " "));
+    out.push("");
+  }
+  return out.join("\n").trim();
+}
+const toNum = t => { t = String(t).replace(/[\s ]/g, ""); if (/^\d{1,3}([.,]\d{3})+([.,]\d{1,2})?$/.test(t)) { const m = t.match(/[.,]\d{1,2}$/); t = (m ? t.slice(0, -m[0].length) : t).replace(/[.,]/g, "") + (m ? "." + m[0].slice(1) : ""); } return parseFloat(t.replace(",", ".")); };
+const NUM = "(\\d{1,3}(?:[ \\u00a0.,]\\d{3})+(?:[.,]\\d{1,2})?|\\d+(?:[.,]\\d+)?)";
+function parseOffer(text, fileName){
+  const t = text.replace(/ /g, " "), low = t.toLowerCase();
+  const r = {title: fileName.replace(/\.pdf$/i, "").replace(/[_-]+/g, " ").trim()};
+  // browser "Save as PDF" header: "2026-10-09 19:07 Listing title - Site.lt"
+  const head = t.match(/^(?:\d{4}-\d{2}-\d{2}|\d{1,2}[./]\d{1,2}[./]\d{2,4}),?\s+\d{1,2}:\d{2}(?:\s*[AP]M)?\s+(.{5,140})$/mi);
+  if (head) r.title = head[1].replace(/\s+[-–|]\s+[^-–|]+\.(?:lt|com|eu|lv|ee)\s*$/i, "").trim();
+  const link = (t.match(/(?:https?:\/\/|www\.)[^\s,;)]+/gi) || []).sort((x, y) => y.length - x.length).slice(0, 1);
+  if (link.length) {
+    r.url = /^http/i.test(link[0]) ? link[0] : "https://" + link[0];
+    const id = link[0].replace(/\/+$/, "").split("/").pop();
+    const line = id.length > 3 && t.split("\n").filter(l => l.trim().endsWith(id) && !/www\.|https?:/i.test(l)).sort((x, y) => y.length - x.length)[0];
+    if (line) r.title = line.trim();
+  }
+  const first = (re, i=1) => { const m = low.match(re); return m ? m[i] : null; };
+  const has = re => re.test(low);
+  // price: prefer a labelled total, else the largest euro amount that is not a per-m² price
+  const euros = [...low.matchAll(new RegExp(NUM + "\\s*(?:€|eur\\b|eurų|евро)(?!\\s*\\/|\\s*už\\s*m|\\s*per\\s*m|\\s*за\\s*м)", "g"))].map(m => toNum(m[1])).filter(n => n >= 20000 && n < 5e6);
+  const pre = [...low.matchAll(new RegExp("(?:€|eur)\\s*" + NUM + "(?!\\s*\\/)", "g"))].map(m => toNum(m[1])).filter(n => n >= 20000 && n < 5e6);
+  const lab = first(new RegExp("(?:kaina|price|цена|стоимость)[^\\d\\n€]{0,25}(?:€\\s*)?" + NUM + "(?!\\s*(?:€|eur)?\\s*\\/)"));
+  const labN = lab ? toNum(lab) : NaN;
+  r.price = labN >= 20000 && labN < 5e6 ? labN : (euros.concat(pre).length ? Math.max(...euros, ...pre) : null);
+  // area
+  const aLab = first(new RegExp("(?<!sklypo\\s)(?:bendras plotas|plotas|total area|area|общая площадь|площадь)[^\\d\\n]{0,20}" + NUM));
+  const aAny = [...low.matchAll(new RegExp("(?<![\\/€])" + NUM + "\\s*(?:m²|m2|kv\\.?\\s*m|sq\\.?\\s*m|кв\\.?\\s*м|м²)", "g"))].filter(m => !/[\/€]\s*$|(?:eur|už|per|за)\s*$/.test(low.slice(Math.max(0, m.index - 6), m.index))).map(m => toNum(m[1])).filter(n => n >= 20 && n <= 400);
+  const aN = aLab ? toNum(aLab) : NaN;
+  r.area = aN >= 20 && aN <= 400 ? aN : (aAny.length ? aAny[0] : null);
+  const int = (v, lo, hi) => { const n = parseInt(v, 10); return n >= lo && n <= hi ? n : null; };
+  r.rooms = int(first(/(?:kambari[ųu](?:\s*(?:skaičius|sk\.?))?|kambariai|kamb\.?\s*sk\.?|rooms|bedrooms|количество комнат|комнат)\s*[:\-–]?\s*(\d{1,2})\b/) || first(/\b(\d)[\s-]*(?:kamb|room|комн)/) , 1, 10);
+  r.bathrooms = int(first(/(?:vonios kambari[ųu]|san\.?\s*mazg[ųu]|bathrooms|санузл\S*)\s*(?:skaičius)?\s*[:\-–]?\s*(\d)\b/) || first(/\b(\d)\s*(?:vonios|san\.?\s*mazg|bathroom|wc|санузл)/), 1, 6);
+  const pair = low.match(/(?:aukštas|floor|этаж)\s*[:\-–]?\s*(\d{1,2})\s*(?:\/|iš|of|из)\s*(\d{1,2})/) || low.match(/\b(\d{1,2})\s*(?:\/|iš|of|из)\s*(\d{1,2})\s*(?:aukšt|a\.|floor|эт)/);
+  r.floor = int(pair ? pair[1] : (first(/(?:aukštas|floor|этаж)\s*[:\-–]?\s*(\d{1,2})\b/) || first(/\b(\d{1,2})\s*(?:-as|-ame|st|nd|rd|th)?\s*(?:aukštas|aukšte|floor\b)/)), 0, 60);
+  r.floorsTotal = int(pair ? pair[2] : (first(/(?:aukštų\s*(?:skaičius|sk\.?)?|floors|storeys|stories|этажность|этажей)\s*[:\-–]?\s*(\d{1,2})\b/) || first(/\b(\d{1,2})\s*(?:aukštų|storeys|stories|floors)\b/)), 1, 60);
+  r.year = int(first(/(?:statybos metai|pastatymo metai|pastatyta[s]?|metai|year built|built in|built|construction year|год постройки|год)\D{0,20}((?:19|20)\d\d)/), 1850, 2040);
+  const en = t.match(/(?:energ\S*(?:\s+\S+){0,2}\s+klas\S*|energy\s+(?:class|rating|efficiency)\S*|класс энерго\S*)\s*[:\-–]?\s*(A\s?\+\+|A\s?\+|A|B|C|D|E|F|G)(?![a-zA-Z])/i);
+  if (en) { const c = en[1].replace(/\s/g, "").toUpperCase(); r.energy = ["A++","A+","A","B","C"].includes(c) ? c : "D or lower"; }
+  const heat = first(/(?:šildymas|šildymo|heating|отопление)\s*(?:tipas|type)?\s*[:\-–]?\s*([^\n]{0,60})/);
+  if (heat) r.heating = /siurbl|geoterm|aeroterm|heat pump|насос/.test(heat) ? "Heat pump" : /duj|gas|газ/.test(heat) ? "Gas" : /centr|district|miesto|центр/.test(heat) ? "Central (district)" : /elektr|electric|электр/.test(heat) ? "Electric" : null;
+  const inst = first(/įrengimas\s*:\s*([^\n]{0,30})/);
+  r.finish = inst ? (/dalin/.test(inst) ? "Partial finish" : /neįrengt|nebaigt|be apdail/.test(inst) ? "No finish" : /įrengt/.test(inst) ? "Full finish" : null) : null;
+  if (!r.finish) r.finish = has(/dalin\S+ apdail|(?:įrengimo lygis|apdaila)\s*:?\s*dalin|partial(?:ly)? finish|частичн\S+ отделк/) ? "Partial finish" : has(/be apdailos|neįrengt|without finish|no finish|unfinished|без отделки/) ? "No finish" : has(/piln\S+ apdail|(?:įrengimo lygis|apdaila)\s*:?\s*piln|su apdaila|full(?:y)? finish|turnkey|с отделкой|под ключ/) ? "Full finish" : null;
+  // portal distance table: a header line of place types, the next line "~ 860 m ~ 1.5 km ..."; turned into walking minutes (about 80 m a minute)
+  const ls = low.split("\n");
+  for (let i = 0; i < ls.length - 1; i++) {
+    const cols = ls[i].match(/darželiai|mokyklos|med\. įstaigos|parduotuvės|vaistinės|stotelės|sporto klubai|aukštosios mok\./g);
+    const dist = [...ls[i+1].matchAll(/~\s*([\d.,]+)\s*(km|m)\b/g)].map(m => toNum(m[1]) * (m[2]==="km" ? 1000 : 1));
+    if (!cols || cols.length < 3 || dist.length < cols.length) continue;
+    const walk = name => { const j = cols.indexOf(name); return j < 0 ? null : Math.max(1, Math.round(dist[j] / 80)); };
+    const kids = [walk("darželiai"), walk("mokyklos")].filter(x => x != null);
+    r.school = kids.length ? Math.min(...kids) : null; r.shops = walk("parduotuvės"); r.transit = walk("stotelės");
+    break;
+  }
+  r.state = has(/naujos statybos|naujas projektas|statomas|new build|new development|under construction|новостройк/) || r.finish==="Partial finish" || r.finish==="No finish" ? "New build" : null;
+  const bal = has(/balkon|balcony|лоджи/) && !has(/balkonas\s*:\s*(?:[-–—]|nėra|0\b)/), ter = has(/teras|terrace|террас/) && !has(/terasa\s*:\s*(?:[-–—]|nėra|0\b)/);
+  r.balcony = bal && ter ? "Balcony and terrace" : bal ? "Balcony" : ter ? "Terrace" : null;
+  r.parking = has(/požemin\S* (?:parkav|automobili|garaž|aikštel)|underground (?:parking|garage)|подземн\S+ парк/) ? "Underground" : null;
+  r.storage = has(/sandėliuk|storage room|storeroom|кладов/) ? "Yes" : null;
+  r.elevator = has(/\bliftas|\bliftu|\blift\b|elevator|лифт/) ? "Yes" : null;
+  const ceil = first(/(?:lubų aukštis|lubos|ceiling height|ceilings?|высота потолк\S*)\D{0,15}(\d[.,]\d{1,2})/);
+  r.ceiling = ceil && toNum(ceil) >= 2 && toNum(ceil) <= 6 ? toNum(ceil) : null;
+  const addr = t.match(/(?:adresas|address|адрес)\s*[:\-–]\s*([^\n]{3,80})/i);
+  r.district = addr ? addr[1].trim() : null;
+  const dirsIn = str => { const out = []; const ab = abbrDirs(str); if (ab) return ab; const W = [["NE",/šiaurės\s*ryt|šiaurryč|north[\s-]?east|северо[\s-]?восто/],["NW",/šiaurės\s*vakar|north[\s-]?west|северо[\s-]?запад/],["SE",/pietryč|pietų\s*ryt|south[\s-]?east|юго[\s-]?восто/],["SW",/pietvakar|pietų\s*vakar|south[\s-]?west|юго[\s-]?запад/],["N",/šiaur|north|север/],["S",/piet|south|юг|южн/],["E",/ryt|east|восто/],["W",/vakar|west|запад/]];
+    for (const [d, re] of W) { const g = new RegExp(re.source, "g"); if (g.test(str)) { out.push(d); str = str.replace(g, " "); } } return out; };
+  const win = first(/(?:langai|langų orientacija|orientacija|kryptis|kryptys|windows?(?: face| facing| orientation)?|orientation|окна)\s*[:\-–]?\s*([^\n.]{0,80})/);
+  r.windows = win ? dirsIn(win) : [];
+  const kit = first(/(?:virtuvės lang\S*|kitchen window\S*|окн\S+ кухни)\s*[:\-–]?\s*([^\n.]{0,60})/);
+  r.kitchenWindow = kit ? dirsIn(kit) : [];
+  return r;
+}
+const ABBR = {"š":"N","p":"S","r":"E","v":"W","šr":"NE","rš":"NE","šv":"NW","vš":"NW","pr":"SE","rp":"SE","pv":"SW","vp":"SW"};
+function abbrDirs(str){
+  const toks = str.toLowerCase().trim().split(/[\/,\s]+/).filter(Boolean);
+  return toks.length && toks.length <= 4 && toks.every(x => ABBR[x]) ? [...new Set(toks.map(x => ABBR[x]))] : null;
+}
+const AREA = new RegExp(NUM + "\\s*(?:m²|m2|kv\\.?\\s*m|sq\\.?\\s*m|кв\\.?\\s*м|м²)", "i");
+function bigEuros(line){ return [...line.matchAll(new RegExp(NUM + "\\s*(?:€|eur\\b|eurų)", "gi"))].map(m => toNum(m[1])).filter(n => n >= 20000 && n < 5e6); }
+const isRow = line => AREA.test(line) && bigEuros(line).length > 0 && line.trim().split(/\s+/).length >= 6;
+function parseRow(line){
+  const am = line.match(AREA), before = line.slice(0, am.index).trim().split(/\s+/);
+  const r = {title: before[0], area: toNum(am[1]), price: Math.max(...bigEuros(line))};
+  const link = line.match(/(?:https?:\/\/|www\.)[^\s,;)]+/i);
+  if (link) r.url = /^http/i.test(link[0]) ? link[0] : "https://" + link[0];
+  let rest = before.slice(1);
+  const d = rest.length && abbrDirs(rest[rest.length-1]);
+  if (d) { r.windows = d; rest = rest.slice(0, -1); }
+  const ints = rest.filter(x => /^\d{1,2}$/.test(x)).map(Number);
+  if (ints.length >= 2) { r.floor = ints[ints.length-2]; r.rooms = ints[ints.length-1]; } else if (ints.length) r.rooms = ints[0];
+  const low = line.toLowerCase();
+  r.finish = /dalin/.test(low) ? "Partial finish" : /be apdailos|neįrengt/.test(low) ? "No finish" : /piln/.test(low) ? "Full finish" : null;
+  if (r.finish==="Partial finish" || r.finish==="No finish") r.state = "New build";
+  return r;
+}
+// One PDF can hold a main offer plus a table of further apartments: return every apartment found.
+function parseAll(text, fileName, single){
+  const lines = text.split("\n"), rows = single ? [] : lines.filter(isRow);
+  const main = parseOffer(lines.filter(l => single || !isRow(l)).join("\n"), fileName);
+  const found = (main.price!=null || main.area!=null) ? [main] : [];
+  for (const l of rows) found.push(parseRow(l));
+  const seen = new Set();
+  return found.map(clean).filter(d => { const k = d.url || d.title + "|" + d.area + "|" + d.price; if (seen.has(k)) return false; seen.add(k); return true; });
+}
+function clean(raw){
+  const d = {title: typeof raw.title==="string" ? raw.title.slice(0,80) : "", url: /^https?:\/\//i.test(raw.url||"") ? raw.url : ""};
+  for (const f of FIELDS) {
+    let v = raw[f.k];
+    if (f.t==="num") v = (typeof v==="number" && isFinite(v)) ? v : null;
+    else if (f.t==="select") v = f.o.includes(v) ? v : null;
+    else if (f.t==="dirs") v = Array.isArray(v) ? DIRS.filter(x => v.includes(x)) : [];
+    else if (f.t==="month") v = /^\d{4}-\d{2}$/.test(v||"") ? v : null;
+    else v = typeof v==="string" ? v.slice(0,200) : null;
+    d[f.k] = v;
+  }
+  return d;
+}
+let picks = [];
+function openPick(found, fileName){
+  picks = found;
+  $("pickTitle").textContent = found.length + " apartments found in " + fileName;
+  $("pickList").replaceChildren(...found.map((d, i) => {
+    const dup = d.url && apts.some(a => a.url===d.url);
+    const bits = [d.rooms!=null ? d.rooms + " rooms" : null, d.area!=null ? num(d.area) + " m²" : null, d.price!=null ? "€" + num(d.price) : null, d.floor!=null ? "floor " + d.floor : null, d.windows.length ? "faces " + d.windows.join(", ") : null].filter(Boolean).join(" · ");
+    return h("label", {class:"pick", for:"pick_"+i}, h("input", {type:"checkbox", id:"pick_"+i, checked: dup ? null : ""}),
+      h("span", null, h("b", null, d.title || "Untitled"), h("br"), bits + (dup ? " · already in your list" : "")));
+  }));
+  $("pick").showModal();
+}
+$("pickCancel").addEventListener("click", () => $("pick").close());
+$("pickForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const chosen = picks.filter((d, i) => $("pick_"+i).checked);
+  $("pick").close();
+  chosen.forEach((d, i) => write(() => col.add({...d, ratings:{}, visited: tab==="visited", createdAt:Date.now()+i})));
+});
+function showFound(found, source){
+  if (found.length===1) openForm(null, found[0], FIELDS.filter(f => Array.isArray(found[0][f.k]) ? found[0][f.k].length : found[0][f.k]!=null).length);
+  else openPick(found, source);
+}
+$("webBtn").addEventListener("click", () => { $("webUrl").value = ""; $("webText").value = ""; $("webErr").hidden = true; $("web").showModal(); });
+$("webCancel").addEventListener("click", () => $("web").close());
+$("webForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const fail = m => { $("webErr").textContent = m; $("webErr").hidden = false; };
+  let url = $("webUrl").value.trim();
+  if (url && !/^https?:\/\//i.test(url)) url = "https://" + url;
+  const text = $("webText").value.replace(/\r/g, "").replace(/\t/g, " ").replace(/[  ]+/g, " ").trim();
+  if (text.length < 80) return fail("Paste the text of the offer page first. A link alone is not enough, because this page cannot open other websites.");
+  let name = "Web offer";
+  try { const u = new URL(url); name = (u.hostname.replace(/^www\./, "") + " " + decodeURIComponent(u.pathname.split("/").filter(Boolean).pop() || "")).trim(); } catch (err) {}
+  const lines = text.split("\n");
+  const page = lines.find(l => l.trim().length > 8 && l.trim().length <= 80);
+  const found = parseAll(text, page ? page.trim() : name, true);
+  if (!found.length) return fail("No price or area was recognised in the pasted text. Check that you copied the whole offer page.");
+  const main = found[0];
+  if (url) main.url = url;
+  $("web").close();
+  showFound(found, "the pasted page");
+});
+$("pdfBtn").addEventListener("click", () => { if (!busy) $("pdfFile").click(); });
+$("pdfFile").addEventListener("change", async e => {
+  const file = e.target.files[0]; e.target.value = "";
+  if (!file || busy) return;
+  busy = true; $("pdfBtn").disabled = true; say("Reading " + file.name + "…");
+  try {
+    const text = await readPdf(file);
+    if (text.length < 80) { say("This PDF is a scan with no readable text, so nothing could be imported. Add the apartment by hand.", true); return; }
+    const found = parseAll(text, file.name);
+    say("");
+    if (!found.length) { say("No apartment details were recognised in this PDF. Add the apartment by hand.", true); return; }
+    showFound(found, file.name);
+  } catch (err) {
+    say("This file could not be opened as a PDF. Password-protected and damaged files are not supported.", true);
+  } finally { busy = false; $("pdfBtn").disabled = false; }
+});
+
+// ---------- start ----------
+buildForm();
+// ---------- Supabase ----------
+const plain = a => { const d = {...a}; delete d.id; delete d.ratings; delete d._others; return d; };
+const check = ({error}) => { if (error) throw error; };
+col = {
+  add: async data => { check(await sb.from("apartments").insert({data})); await reload(); },
+  doc: id => ({
+    update: async patch => {
+      if (patch.ratings) {
+        for (const [crit, val] of Object.entries(patch.ratings[me] || {}))
+          check(val==null
+            ? await sb.from("ratings").delete().match({apartment_id:id, rater:me, criterion:crit})
+            : await sb.from("ratings").upsert({apartment_id:id, rater:me, criterion:crit, score:val}));
+      } else {
+        const cur = apts.find(a => a.id===id);
+        check(await sb.from("apartments").update({data:{...(cur ? plain(cur) : {}), ...patch}, updated_at:new Date().toISOString()}).eq("id", id));
+      }
+      await reload();
+    },
+    delete: async () => { check(await sb.from("apartments").delete().eq("id", id)); await reload(); },
+  }),
+};
+let reloading = null, again = false;
+async function reload(){
+  if (reloading) { again = true; return reloading; }
+  reloading = (async () => {
+    const [ap, ra, ot, me2] = await Promise.all([
+      sb.from("apartments").select("id,data,created_at"),
+      sb.from("ratings").select("apartment_id,rater,criterion,score"),
+      sb.rpc("others_rated"),
+      sb.from("members").select("email,name"),
+    ]);
+    const err = ap.error || ra.error || ot.error || me2.error;
+    if (err) { say("Could not load apartments: " + err.message, true); return; }
+    members = me2.data.map(m => ({email: m.email.toLowerCase(), name: m.name}));
+    names = Object.fromEntries(members.map(m => [m.email, m.name]));
+    const others = new Map();
+    for (const x of ot.data) { if (!others.has(x.apartment_id)) others.set(x.apartment_id, new Set()); others.get(x.apartment_id).add(x.criterion); }
+    apts = ap.data.map(row => {
+      const ratings = {};
+      for (const x of ra.data) if (x.apartment_id===row.id) (ratings[x.rater] ||= {})[x.criterion] = x.score;
+      return {...row.data, id: row.id, createdAt: row.data.createdAt || Date.parse(row.created_at), ratings, _others: others.get(row.id) || new Set()};
+    });
+    loaded = true;
+    render();
+  })();
+  try { await reloading; } finally { reloading = null; if (again) { again = false; reload(); } }
+}
+function showSignIn(){
+  $("empty").hidden = true; $("signin").hidden = false;
+  document.querySelector(".tabs").hidden = true; document.querySelector("label.sort").hidden = true;
+  $("signin").addEventListener("submit", async e => {
+    e.preventDefault();
+    const email = $("signinEmail").value.trim();
+    if (!/^\S+@\S+\.\S+$/.test(email)) { $("signinMsg").textContent = "Enter a valid email address."; $("signinEmail").focus(); return; }
+    $("signinBtn").disabled = true; $("signinMsg").textContent = "Sending…";
+    const {error} = await sb.auth.signInWithOtp({email, options:{emailRedirectTo: location.origin + location.pathname}});
+    $("signinBtn").disabled = false;
+    $("signinMsg").textContent = error ? "Could not send the link: " + error.message : "Check your inbox for the sign-in link from Supabase and open it on this device.";
+  });
+}
+(async function start(){
+  if (!window.supabase || !CFG.url || !CFG.anonKey || /YOUR_/.test(CFG.url + CFG.anonKey)) {
+    $("emptyTitle").textContent = "Not connected to the database yet";
+    $("emptyText").textContent = "Fill in config.js with your Supabase project URL and anon key, then deploy again.";
+    return;
+  }
+  sb = supabase.createClient(CFG.url, CFG.anonKey);
+  const {data:{session}} = await sb.auth.getSession();
+  sb.auth.onAuthStateChange((event) => {
+    if ((event==="SIGNED_IN" && !$("signin").hidden) || event==="SIGNED_OUT") location.reload();
+  });
+  if (!session) return showSignIn();
+  me = (session.user.email || "").toLowerCase();
+  $("whoami").textContent = me; $("acct").hidden = false;
+  $("signout").addEventListener("click", () => sb.auth.signOut());
+  const {data: ok, error} = await sb.rpc("is_member");
+  if (error || !ok) {
+    $("emptyTitle").textContent = "This email is not on the list";
+    $("emptyText").textContent = me + " can't open the shortlist. Sign out and use the email that was added in Supabase, or ask to be added.";
+    return;
+  }
+  db = sb;
+  let t = 0; const soon = () => { clearTimeout(t); t = setTimeout(reload, 250); };
+  sb.channel("shortlist")
+    .on("postgres_changes", {event:"*", schema:"public", table:"apartments"}, soon)
+    .on("postgres_changes", {event:"*", schema:"public", table:"ratings"}, soon)
+    .subscribe();
+  window.addEventListener("focus", soon);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) soon(); });
+  await reload();
+})();
+</script>
+
+</body>
+</html>
